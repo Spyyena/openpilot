@@ -11,8 +11,9 @@ from openpilot.common.constants import CV
 V_CRUISE_MIN = 8
 V_CRUISE_MAX = 145
 V_CRUISE_UNSET = 255
-V_CRUISE_INITIAL = 40
-V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 105
+# Lowered to match urban driving conditions
+V_CRUISE_INITIAL = 32
+V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 32
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 
 ButtonEvent = car.CarState.ButtonEvent
@@ -42,7 +43,12 @@ class VCruiseHelper:
     return self.v_cruise_kph != V_CRUISE_UNSET
 
   def update_v_cruise(self, CS, enabled, is_metric):
-    self.v_cruise_kph_last = self.v_cruise_kph
+    # Only remember a real setpoint. If we let UNSET overwrite this while disengaged,
+    # resume can't recall the last speed and falls back to the initial floor.
+    # This makes brake/cancel preserve the setpoint; master-button-off (available False)
+    # still clears it via the branch below.
+    if self.v_cruise_kph != V_CRUISE_UNSET:
+      self.v_cruise_kph_last = self.v_cruise_kph
 
     if CS.cruiseState.available:
       if not self.CP.pcmCruise:
