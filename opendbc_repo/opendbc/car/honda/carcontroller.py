@@ -197,11 +197,18 @@ class CarController(CarControllerBase):
         if self.CP.flags & HondaFlags.BOSCH:
           self.accel = float(np.clip(accel, self.params.BOSCH_ACCEL_MIN, self.params.BOSCH_ACCEL_MAX))
           self.gas = float(np.interp(accel, self.params.BOSCH_GAS_LOOKUP_BP, self.params.BOSCH_GAS_LOOKUP_V))
+          min_gas_accel = self.params.BOSCH_GAS_LOOKUP_BP[0]
+          if len(self.params.BOSCH_COAST_GAS_LOOKUP_BP):
+            # blend from the default lookup at low speed to the coast lookup at cruising speed
+            coast_w = float(np.interp(CS.out.vEgo, self.params.BOSCH_COAST_SPEED_BP, [0.0, 1.0]))
+            coast_gas = float(np.interp(accel, self.params.BOSCH_COAST_GAS_LOOKUP_BP, self.params.BOSCH_COAST_GAS_LOOKUP_V))
+            self.gas = (1 - coast_w) * self.gas + coast_w * coast_gas
+            min_gas_accel = (1 - coast_w) * min_gas_accel + coast_w * self.params.BOSCH_COAST_GAS_LOOKUP_BP[0]
 
           stopping = actuators.longControlState == LongCtrlState.stopping
           self.stopping_counter = self.stopping_counter + 1 if stopping else 0
           can_sends.extend(hondacan.create_acc_commands(self.packer, self.CAN, CC.enabled, CC.longActive, self.accel, self.gas,
-                                                        self.stopping_counter, self.CP, self.params.BOSCH_GAS_LOOKUP_BP[0]))
+                                                        self.stopping_counter, self.CP, min_gas_accel))
         else:
           apply_brake = np.clip(self.brake_last - wind_brake, 0.0, 1.0)
           apply_brake = int(np.clip(apply_brake * self.params.NIDEC_BRAKE_MAX, 0, self.params.NIDEC_BRAKE_MAX - 1))

@@ -34,6 +34,10 @@ class CarControllerParams:
 
   BOSCH_GAS_LOOKUP_BP = [-0.2, 2.0]  # 2m/s^2
   BOSCH_GAS_LOOKUP_V = [0, 1600]
+  # Optional coast lookup, blended in over BOSCH_COAST_SPEED_BP (see carcontroller). Empty = not used.
+  BOSCH_COAST_GAS_LOOKUP_BP: list[float] = []
+  BOSCH_COAST_GAS_LOOKUP_V: list[float] = []
+  BOSCH_COAST_SPEED_BP = [4.0, 6.0]  # m/s: default lookup below, coast lookup above
 
   STEER_STEP = 1  # 100 Hz
   STEER_DELTA_UP = 3  # min/max in 0.33s for all Honda
@@ -61,12 +65,13 @@ class CarControllerParams:
       self.STEER_MAX = 2560
 
     if CP.carFingerprint == CAR.HONDA_ACCORD and CP.flags & HondaFlags.HYBRID:
-      # With no gas this car already slows about -0.4 to -0.5 m/s^2 (regen), so taper the gas down to
-      # zero at -0.45 instead of braking (and lighting the brake lights) for any request below -0.2.
+      # With no gas this car already slows about -0.4 to -0.5 m/s^2 (regen), so above ~13 mph taper the gas
+      # down to zero at -0.45 instead of braking (and lighting the brake lights) for any request below -0.2.
       # Stays above the planner's A_CRUISE_MIN (-0.5) so cruise can still brake when over set speed.
-      # Above 0 m/s^2 this matches the default lookup.
-      self.BOSCH_GAS_LOOKUP_BP = [-0.45, -0.2, 0.0, 2.0]
-      self.BOSCH_GAS_LOOKUP_V = [0, 40, 1600 * 0.2 / 2.2, 1600]
+      # Above 0 m/s^2 this matches the default lookup. Below ~9 mph the default lookup is used, so weak
+      # requests near a stop keep a brake request instead of adding gas.
+      self.BOSCH_COAST_GAS_LOOKUP_BP = [-0.45, -0.2, 0.0, 2.0]
+      self.BOSCH_COAST_GAS_LOOKUP_V = [0, 40, 1600 * 0.2 / 2.2, 1600]
 
 
 class HondaSafetyFlags(IntFlag):
