@@ -101,6 +101,7 @@ class CarController(CarControllerBase):
     self.apply_brake_last = 0
     self.last_pump_ts = 0.
     self.stopping_counter = 0
+    self.coast_braking = False
 
     self.accel = 0.0
     self.speed = 0.0
@@ -204,6 +205,9 @@ class CarController(CarControllerBase):
             coast_gas = float(np.interp(accel, self.params.BOSCH_COAST_GAS_LOOKUP_BP, self.params.BOSCH_COAST_GAS_LOOKUP_V))
             self.gas = (1 - coast_w) * self.gas + coast_w * coast_gas
             min_gas_accel = (1 - coast_w) * min_gas_accel + coast_w * self.params.BOSCH_COAST_GAS_LOOKUP_BP[0]
+            if self.coast_braking:
+              min_gas_accel += coast_w * self.params.BOSCH_COAST_BRAKE_HYST
+            self.coast_braking = self.accel < min_gas_accel
 
           stopping = actuators.longControlState == LongCtrlState.stopping
           self.stopping_counter = self.stopping_counter + 1 if stopping else 0
