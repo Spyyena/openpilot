@@ -60,6 +60,13 @@ class CarControllerParams:
       # Odyssey MMR uses up to 2560 for LKA; higher RDM commands are nonlinear and also apply brake drag.
       self.STEER_MAX = 2560
 
+    if CP.carFingerprint == CAR.HONDA_ACCORD and CP.flags & HondaFlags.HYBRID:
+      # Lifting off the gas already slows this car about -0.55 m/s^2 (regen), so taper the gas down to
+      # zero at -0.5 instead of braking (and lighting the brake lights) for any request below -0.2.
+      # Above 0 m/s^2 this matches the default lookup.
+      self.BOSCH_GAS_LOOKUP_BP = [-0.5, -0.2, 0.0, 2.0]
+      self.BOSCH_GAS_LOOKUP_V = [0, 40, 1600 * 0.2 / 2.2, 1600]
+
 
 class HondaSafetyFlags(IntFlag):
   ALT_BRAKE = 1
