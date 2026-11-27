@@ -233,13 +233,13 @@ class CarState(CarStateBase, CarStateExt):
       *create_button_events(self.cruise_setting, prev_cruise_setting, SETTINGS_BUTTONS_DICT),
     ]
 
-    CarStateExt.update(self, ret, can_parsers)
+    CarStateExt.update(self, ret, ret_sp, can_parsers)
 
     return ret, ret_sp
 
   def get_can_parsers(self, CP, CP_SP):
     parsers = {
-      Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], [], CanBus(CP).pt),
+      Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], CarStateExt.pt_messages_ext(CP), CanBus(CP).pt),
       Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], [], CanBus(CP).camera),
     }
     if CP.flags & HondaFlags.HAS_BSM:
